@@ -1,0 +1,11 @@
+{
+  "name": "doorman-contract",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "compile": "mkdir -p src/managed && compact compile +0.31.0 src/doorman.compact src/managed/doorman",
+    "test": "vitest run"
+  },
+  "dependencies": { "@midnight-ntwrk/compact-runtime": "0.16.0" },
+  "devDependencies": { "@types/node": "^22.15.29", "typescript": "^5.8.3", "vitest": "^3.2.0" }
+}

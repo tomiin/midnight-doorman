@@ -1,0 +1,224 @@
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// =============================================================================
+// DOORMAN -- prove you are old enough, without showing anyone your ID
+// -----------------------------------------------------------------------------
+// She walks up to the door. Today she hands over a driving licence carrying her
+// name, her address, her licence number and her exact date of birth, so that a
+// stranger can answer one question: is she over 21.
+//
+// Doorman answers that question and nothing else.
+//
+//   * A registered issuer (a DMV, say) enrols her ONCE. What lands on-chain is an
+//     opaque hash. No name, no address, no date of birth.
+//   * The ID itself stays on her phone and is never transmitted, encrypted or
+//     otherwise. There is no vendor in the middle holding anything.
+//   * At the door her phone generates a zero-knowledge proof that she holds a
+//     valid enrolment AND that the birth year inside it clears the threshold.
+//   * The door learns one bit, plus a pseudonym unique to that venue.
+//
+// WHY THIS HAS TO BE A PHONE APP
+// ------------------------------
+// The proof is generated ON THE DEVICE. That is the only reason the underlying
+// data can stay there. Ship this as a website and something has to be uploaded to
+// a server to be proven, and then you are back to somebody holding her ID.
+//
+// WHAT AN OBSERVER LEARNS
+// -----------------------
+// Every successful proof publishes the same two things: a valid root of the
+// enrolment tree, and `true`. checkRoot writes its result to the public
+// transcript, so a value that varies between callers is a value an observer can
+// read. Both checks are asserted rather than returned, which makes them constant.
+//
+// The venue pseudonym is deliberately stable per venue, so a bar can recognise a
+// returning patron or bar someone, but derived from the venue id, so two venues
+// comparing notes cannot tell they served the same person.
+//
+// HONEST LIMITS
+// -------------
+//   * Enrolment means the issuer knows the link between a human and a
+//     commitment. That is unavoidable if the credential is to mean anything.
+//   * Year granularity, not full date. Someone whose birthday has not yet passed
+//     this year is treated as already of age. Trading exactness for a cheaper
+//     circuit and a smaller leak; a production build would bind the full date.
+//   * Nothing here proves the phone is hers. Device binding and liveness are a
+//     separate problem and are not solved by a proof.
+//   * Unaudited.
+// =============================================================================
+
+// ---- Roles ------------------------------------------------------------------
+
+// Registers issuers and advances the year. One key here; in production this is a
+// multi-party role.
+export sealed ledger registry: Bytes<32>;
+
+// Issuer tag -> registered. Only a registered issuer can enrol anybody.
+export ledger issuers: Map<Bytes<32>, Boolean>;
+
+// ---- Enrolment state --------------------------------------------------------
+
+// ONE tree, with the issuer tag inside the leaf rather than a tree per issuer.
+// Per-issuer trees would need one checkRoot each, and checkRoot publishes its
+// result, so an observer could read off which issuer vouched for her.
+export ledger enrolled: HistoricMerkleTree<10, Bytes<32>>;
+
+// The current year, as a plain number. A circuit cannot read a clock, so the
+// registry advances this and the age check is made against it.
+export ledger currentYear: Uint<64>;
+
+// ---- Door state -------------------------------------------------------------
+
+// Venue-specific pseudonyms that have been admitted at least once.
+export ledger admitted: Set<Bytes<32>>;
+
+export ledger enrolmentCount: Counter;
+export ledger admissionCount: Counter;
+
+// ---- Policy -----------------------------------------------------------------
+
+export pure circuit legalAge(): Uint<64> { return 21; }
+
+// ---- Private witnesses ------------------------------------------------------
+
+witness localSecretKey(): Bytes<32>;
+
+// Her birth year. Never disclosed. Only ever compared, in-circuit.
+witness birthYear(): Uint<64>;
+
+// Which issuer enrolled her. Private: the door does not learn it.
+witness enrollingIssuer(): Bytes<32>;
+
+// The membership path for her own leaf.
+witness enrolmentPath(leaf: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+
+// ---- Derivations (domain-separated throughout) ------------------------------
+
+export pure circuit holderId(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "doorman:holder:v1"), sk]);
+}
+
+export pure circuit issuerId(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "doorman:issuer:v1"), sk]);
+}
+
+// What an issuer writes into the tree. Binds who she is, what year she was born,
+// and who vouched for it, in ONE hash. Three chained two-input hashes would cost
+// nearly double for the same binding.
+export pure circuit enrolmentLeaf(
+  holder: Bytes<32>,
+  year: Uint<64>,
+  issuer: Bytes<32>,
+): Bytes<32> {
+  return persistentHash<Vector<4, Bytes<32>>>([
+    pad(32, "doorman:leaf:v1"),
+    holder,
+    year as Bytes<32>,
+    issuer
+  ]);
+}
+
+// What one venue sees. Stable for that venue, unlinkable across venues.
+export pure circuit patronId(sk: Bytes<32>, venue: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([pad(32, "doorman:patron:v1"), sk, venue]);
+}
+
+// ---- Guards -----------------------------------------------------------------
+
+circuit assertRegistry(): [] {
+  assert(disclose(issuerId(localSecretKey()) == registry),
+    "Doorman: caller is not the registry");
+}
+
+// ---- Constructor ------------------------------------------------------------
+
+constructor(startYear: Uint<64>) {
+  registry = disclose(issuerId(localSecretKey()));
+  currentYear = disclose(startYear);
+}
+
+// ---- Registry actions -------------------------------------------------------
+
+export circuit registerIssuer(tag: Bytes<32>): [] {
+  assertRegistry();
+  issuers.insert(disclose(tag), true);
+}
+
+export circuit revokeIssuer(tag: Bytes<32>): [] {
+  assertRegistry();
+  issuers.insert(disclose(tag), false);
+}
+
+export circuit advanceYear(): [] {
+  assertRegistry();
+  currentYear = (currentYear + 1) as Uint<64>;
+}
+
+// ---- Issuer action ----------------------------------------------------------
+
+// Enrol a person. The issuer supplies the holder id and birth year it verified
+// out of band, from the physical document. Only the resulting hash lands here.
+export circuit enrol(holder: Bytes<32>, year: Uint<64>): [] {
+  const callerTag = issuerId(localSecretKey());
+  const tag = disclose(callerTag);
+  assert(issuers.member(tag), "Doorman: caller is not a registered issuer");
+  assert(issuers.lookup(tag), "Doorman: this issuer has been revoked");
+
+  enrolled.insert(disclose(enrolmentLeaf(disclose(holder), disclose(year), tag)));
+  enrolmentCount.increment(1);
+}
+
+// ---- The door ---------------------------------------------------------------
+
+// Prove to a venue that she is old enough.
+//
+// Returns a pseudonym unique to that venue. The venue learns that, and that the
+// proof verified. Not her name, not her birth year, not which issuer enrolled
+// her, and not whether she has been anywhere else.
+export circuit proveOfAge(venueId: Bytes<32>): Bytes<32> {
+  const sk = localSecretKey();
+  const holder = holderId(sk);
+  const year = birthYear();
+  const issuer = enrollingIssuer();
+
+  const leaf = enrolmentLeaf(holder, year, issuer);
+  const path = enrolmentPath(leaf);
+
+  // Bind the path to OUR leaf before checking membership.
+  //
+  // merkleTreePathRoot hashes the path's own leaf, and this witness runs on the
+  // prover's machine. Without this assert, anyone could return a genuinely
+  // enrolled person's path and be admitted having never been enrolled. Verified
+  // end to end at github.com/tomiin/merkle-leaf-binding-probe. Costs 8 rows.
+  assert(path.leaf == leaf, "Doorman: enrolment path does not match this holder");
+
+  assert(enrolled.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(path))),
+    "Doorman: no valid enrolment");
+
+  // The age test itself. `year` never leaves the circuit; only the verdict does,
+  // and the verdict is asserted, so it is `true` for every proof that lands.
+  assert(disclose((year + legalAge()) as Uint<64> <= currentYear),
+    "Doorman: not old enough");
+
+  const patron = disclose(patronId(sk, venueId));
+  if (!admitted.member(patron)) {
+    admitted.insert(patron);
+    admissionCount.increment(1);
+  }
+  return patron;
+}
+
+// ---- Reads ------------------------------------------------------------------
+
+export circuit hasBeenAdmitted(patron: Bytes<32>): Boolean {
+  return admitted.member(disclose(patron));
+}
+
+export circuit isRegisteredIssuer(tag: Bytes<32>): Boolean {
+  const t = disclose(tag);
+  if (!issuers.member(t)) { return false; }
+  return issuers.lookup(t);
+}
+
+export circuit thisYear(): Uint<64> { return currentYear; }

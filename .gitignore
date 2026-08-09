@@ -1,0 +1,6 @@
+node_modules/
+**/managed/
+build/
+.gradle/
+local.properties
+.idea/
