@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "D" mark on transparent — adaptive-icon foreground.
+     108x108dp canvas with 18dp safe-zone padding on every side, so the
+     glyph stays inside the 72x72 visible circle when masked by GMS.
+     evenOdd fill: the inner path is subtracted to make the counter. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M36,32 L55,32 C68,32 75,41 75,54 C75,67 68,76 55,76 L36,76 Z M44,40 L44,68 L55,68 C63,68 67,62 67,54 C67,46 63,40 55,40 Z" />
+</vector>

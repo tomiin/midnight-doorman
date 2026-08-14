@@ -30,14 +30,13 @@ export class DoormanSimulator {
   private update: (ps: DoormanPrivateState) => void = () => {};
   contractAddress: ContractAddress;
 
-  constructor(registrySk: Uint8Array, startYear: bigint) {
+  constructor(registrySk: Uint8Array) {
     this.contract = new Contract<DoormanPrivateState>(witnesses);
     this.contractAddress = sampleContractAddress();
     const ps = createPrivateState(registrySk);
     const { currentPrivateState, currentContractState, currentZswapLocalState } =
       this.contract.initialState(
         createConstructorContext(ps, deployerCoinPublicKey),
-        startYear,
       );
     this.circuitContext = {
       currentPrivateState,
@@ -76,6 +75,9 @@ export class DoormanSimulator {
     return r.result;
   }
 
+  claimRegistry(): void {
+    this.commit(this.contract.impureCircuits.claimRegistry(this.circuitContext));
+  }
   registerIssuer(tag: Uint8Array): void {
     this.commit(this.contract.impureCircuits.registerIssuer(this.circuitContext, tag));
   }
@@ -103,12 +105,13 @@ export class DoormanSimulator {
 }
 
 /** A deployed contract with the DMV already registered as an issuer. */
-export const deploy = (startYear: bigint = 2026n) => {
+export const deploy = () => {
   const REGISTRY = key('registry');
   const DMV = key('dmv');
-  const sim = new DoormanSimulator(REGISTRY, startYear);
+  const sim = new DoormanSimulator(REGISTRY);
   const dmvTag = issuerId(DMV);
   sim.actor('dmv', DMV);
+  sim.as('registry').claimRegistry();
   sim.as('registry').registerIssuer(dmvTag);
   return { sim, dmvTag, DMV };
 };

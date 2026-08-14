@@ -105,7 +105,73 @@ path-binding regression.
 
 ## Deployed contract
 
-Preprod: `<address to follow>`
+| network | address |
+| --- | --- |
+| Preprod | `ea2d6468eaa2143faeb30d0e618bbcef7d271e4422779656824909c1fef7d5fa` |
+
+Deployed from the Android app itself, on a Pixel 8 emulator, with the proof
+generated **on the device**. No proof server.
+
+Circuits called on-chain, beyond the deploy:
+
+- `claimRegistry` — records the deploying device as the registry authority
+- `registerIssuer` — the registry licenses an issuer
+- `enrol` — an issuer enrols a holder. Three enrolments have landed; the
+  on-chain counter reads 3.
+
+Recording of an `enrol` call running against preprod on the emulator:
+[`docs/doorman-preprod-enrol.mov`](docs/doorman-preprod-enrol.mov)
+
+## The Android app
+
+`app/` is a Kuira SDK dApp (`io.github.kuiralabs:dapp-ui`), package
+`io.github.tomiin.doorman`. Sigil identity and the embedded wallet come from the
+SDK's `PanelBar`; everything below it is this project.
+
+```sh
+./gradlew :app:installDebug
+```
+
+Then: forge a sigil, switch the network picker to **preprod**, fund the wallet
+address at `faucet.preprod.midnight.network`, tap **Register** next to DUST, and
+deploy. The dust step has to happen in the app; the `mn` CLI cannot register dust
+for an embedded wallet.
+
+## What runs on Kuira today, and what does not
+
+Being precise about this, because the contract in `contract/` is not identical to
+the one the app currently deploys.
+
+**Kuira 0.1.0-alpha05 cannot construct a `HistoricMerkleTree`.** A contract
+declaring one fails at deploy, inside `initialState`, at
+`StateValue.newBoundedMerkleTree` — before any circuit or witness runs. Neither
+Kuira reference app (counter, bboard) has a tree, so nothing exercises that path.
+
+That means the enrolment tree and `proveOfAge` are absent from the deployed
+build. What the app does today is the **issuer half**: a registry, licensed
+issuers, and enrolment writing one opaque hash per person. The full contract,
+including the tree and the age proof, is preserved at
+`contract/src/doorman.compact.full` and is what the browser build will use, since
+the TypeScript SDK can query the tree for a membership path.
+
+Four other alpha constraints found while building this, none of them documented:
+
+1. **Every declared witness must be present** in the handle, even ones the circuit
+   being called never invokes. Omit one and the constructor dies with
+   `does not contain a function-valued field named <x>`.
+2. **`WitnessResult` accepts only a `ByteArray`**, whatever the Compact type is.
+   A `Uint<64>` witness is hand-packed bytes.
+3. **`deploy()` passes no constructor arguments.** A constructor that declares a
+   parameter fails with `expected 2 arguments, received 1`.
+4. **The constructor cannot read witnesses.** This rules out the usual
+   deployer-becomes-owner pattern, and is why `registry` is claimed by a separate
+   `claimRegistry()` circuit rather than being a `sealed` field set at
+   construction. The gap between deploy and claim is a race, which is an honest
+   cost of the workaround.
+
+Preprod's indexer also needs longer than the recipe's suggested 3 to 5 seconds
+before a freshly deployed contract can be called; the app retries with backoff
+rather than assuming a fixed wait.
 
 ---
 

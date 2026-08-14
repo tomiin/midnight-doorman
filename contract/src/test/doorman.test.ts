@@ -28,6 +28,12 @@ const enrolWith = (
 };
 
 describe('Doorman — the registry', () => {
+  it('the registry can only be claimed once', () => {
+    const { sim } = deploy();
+    expect(() => sim.as('registry').claimRegistry())
+      .toThrow(/already been claimed/);
+  });
+
   it('registers an issuer', () => {
     const { sim, dmvTag } = deploy();
     expect(sim.isRegisteredIssuer(dmvTag)).toBe(true);

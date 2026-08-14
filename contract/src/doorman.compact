@@ -52,7 +52,17 @@ import CompactStandardLibrary;
 
 // Registers issuers and advances the year. One key here; in production this is a
 // multi-party role.
-export sealed ledger registry: Bytes<32>;
+//
+// NOT `sealed`, and not set in the constructor. Kuira's deploy path executes the
+// constructor without supplying witnesses, so a constructor that calls
+// localSecretKey() dies with "TypeError: not a function" at initialState. Both
+// Kuira reference apps (counter, bboard) have witness-free constructors. The
+// registry is therefore claimed by the first caller of claimRegistry(), which
+// CAN read witnesses because it is an ordinary circuit.
+export ledger registry: Bytes<32>;
+
+// Whether the registry has been claimed. Guards the one-shot claim.
+export ledger registryClaimed: Boolean;
 
 // Issuer tag -> registered. Only a registered issuer can enrol anybody.
 export ledger issuers: Map<Bytes<32>, Boolean>;
@@ -62,7 +72,10 @@ export ledger issuers: Map<Bytes<32>, Boolean>;
 // ONE tree, with the issuer tag inside the leaf rather than a tree per issuer.
 // Per-issuer trees would need one checkRoot each, and checkRoot publishes its
 // result, so an observer could read off which issuer vouched for her.
-export ledger enrolled: HistoricMerkleTree<10, Bytes<32>>;
+// TEMPORARILY REMOVED for a Kuira runtime probe. Restore from
+// doorman.compact.full once we know whether newBoundedMerkleTree exists in the
+// SDK's bundled compact runtime.
+// export ledger enrolled: HistoricMerkleTree<10, Bytes<32>>;
 
 // The current year, as a plain number. A circuit cannot read a clock, so the
 // registry advances this and the age check is made against it.
@@ -91,7 +104,7 @@ witness birthYear(): Uint<64>;
 witness enrollingIssuer(): Bytes<32>;
 
 // The membership path for her own leaf.
-witness enrolmentPath(leaf: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+// witness enrolmentPath(leaf: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
 
 // ---- Derivations (domain-separated throughout) ------------------------------
 
@@ -127,15 +140,34 @@ export pure circuit patronId(sk: Bytes<32>, venue: Bytes<32>): Bytes<32> {
 // ---- Guards -----------------------------------------------------------------
 
 circuit assertRegistry(): [] {
+  assert(registryClaimed, "Doorman: the registry has not been claimed yet");
   assert(disclose(issuerId(localSecretKey()) == registry),
     "Doorman: caller is not the registry");
 }
 
 // ---- Constructor ------------------------------------------------------------
 
-constructor(startYear: Uint<64>) {
+// No constructor arguments.
+//
+// Kuira's deploy() invokes the constructor with the context only, so a
+// contract that declares a parameter dies with "Contract state constructor:
+// expected 2 arguments (as invoked from Typescript), received 1". The year is
+// therefore seeded to a constant and moved with advanceYear().
+constructor() {
+  currentYear = 2026;
+  registryClaimed = false;
+}
+
+// Claim the registry. First caller wins, once only.
+//
+// This is what the constructor would do if it could read a witness. Whoever
+// deploys should call this immediately; on a real deployment the gap between
+// deploy and claim is a race, which is an honest limitation of working around
+// the constructor restriction rather than a design choice.
+export circuit claimRegistry(): [] {
+  assert(!registryClaimed, "Doorman: the registry has already been claimed");
   registry = disclose(issuerId(localSecretKey()));
-  currentYear = disclose(startYear);
+  registryClaimed = true;
 }
 
 // ---- Registry actions -------------------------------------------------------
@@ -165,7 +197,6 @@ export circuit enrol(holder: Bytes<32>, year: Uint<64>): [] {
   assert(issuers.member(tag), "Doorman: caller is not a registered issuer");
   assert(issuers.lookup(tag), "Doorman: this issuer has been revoked");
 
-  enrolled.insert(disclose(enrolmentLeaf(disclose(holder), disclose(year), tag)));
   enrolmentCount.increment(1);
 }
 
@@ -176,39 +207,6 @@ export circuit enrol(holder: Bytes<32>, year: Uint<64>): [] {
 // Returns a pseudonym unique to that venue. The venue learns that, and that the
 // proof verified. Not her name, not her birth year, not which issuer enrolled
 // her, and not whether she has been anywhere else.
-export circuit proveOfAge(venueId: Bytes<32>): Bytes<32> {
-  const sk = localSecretKey();
-  const holder = holderId(sk);
-  const year = birthYear();
-  const issuer = enrollingIssuer();
-
-  const leaf = enrolmentLeaf(holder, year, issuer);
-  const path = enrolmentPath(leaf);
-
-  // Bind the path to OUR leaf before checking membership.
-  //
-  // merkleTreePathRoot hashes the path's own leaf, and this witness runs on the
-  // prover's machine. Without this assert, anyone could return a genuinely
-  // enrolled person's path and be admitted having never been enrolled. Verified
-  // end to end at github.com/tomiin/merkle-leaf-binding-probe. Costs 8 rows.
-  assert(path.leaf == leaf, "Doorman: enrolment path does not match this holder");
-
-  assert(enrolled.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(path))),
-    "Doorman: no valid enrolment");
-
-  // The age test itself. `year` never leaves the circuit; only the verdict does,
-  // and the verdict is asserted, so it is `true` for every proof that lands.
-  assert(disclose((year + legalAge()) as Uint<64> <= currentYear),
-    "Doorman: not old enough");
-
-  const patron = disclose(patronId(sk, venueId));
-  if (!admitted.member(patron)) {
-    admitted.insert(patron);
-    admissionCount.increment(1);
-  }
-  return patron;
-}
-
 // ---- Reads ------------------------------------------------------------------
 
 export circuit hasBeenAdmitted(patron: Bytes<32>): Boolean {
