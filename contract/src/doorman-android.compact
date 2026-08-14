@@ -1,3 +1,25 @@
+// ============================================================================
+// ANDROID BUILD. Not the canonical contract — see doorman.compact for that.
+//
+// Identical to doorman.compact except that the enrolment tree and the age proof
+// are removed:
+//
+//   - export ledger enrolled: HistoricMerkleTree<10, Bytes<32>>
+//   - witness enrolmentPath(...)
+//   - export circuit proveOfAge(...)
+//
+// Kuira 0.1.0-alpha05 cannot construct a bounded Merkle tree. A contract
+// declaring one fails at deploy inside initialState, at
+// StateValue.newBoundedMerkleTree, before any circuit or witness runs.
+// Confirmed by deploying this contract and doorman.compact back to back with
+// the tree as the only difference.
+//
+// So this build is the issuer half: a registry, licensed issuers, and enrolment
+// writing one opaque hash per person. That is what is deployed on preprod at
+// ea2d6468eaa2143faeb30d0e618bbcef7d271e4422779656824909c1fef7d5fa. The door
+// half needs a membership proof and waits on the SDK.
+// ============================================================================
+
 pragma language_version >= 0.23;
 
 import CompactStandardLibrary;
@@ -72,7 +94,10 @@ export ledger issuers: Map<Bytes<32>, Boolean>;
 // ONE tree, with the issuer tag inside the leaf rather than a tree per issuer.
 // Per-issuer trees would need one checkRoot each, and checkRoot publishes its
 // result, so an observer could read off which issuer vouched for her.
-export ledger enrolled: HistoricMerkleTree<10, Bytes<32>>;
+// TEMPORARILY REMOVED for a Kuira runtime probe. Restore from
+// doorman.compact.full once we know whether newBoundedMerkleTree exists in the
+// SDK's bundled compact runtime.
+// export ledger enrolled: HistoricMerkleTree<10, Bytes<32>>;
 
 // The current year, as a plain number. A circuit cannot read a clock, so the
 // registry advances this and the age check is made against it.
@@ -101,7 +126,7 @@ witness birthYear(): Uint<64>;
 witness enrollingIssuer(): Bytes<32>;
 
 // The membership path for her own leaf.
-witness enrolmentPath(leaf: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+// witness enrolmentPath(leaf: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
 
 // ---- Derivations (domain-separated throughout) ------------------------------
 
@@ -194,7 +219,6 @@ export circuit enrol(holder: Bytes<32>, year: Uint<64>): [] {
   assert(issuers.member(tag), "Doorman: caller is not a registered issuer");
   assert(issuers.lookup(tag), "Doorman: this issuer has been revoked");
 
-  enrolled.insert(disclose(enrolmentLeaf(disclose(holder), disclose(year), tag)));
   enrolmentCount.increment(1);
 }
 
@@ -205,39 +229,6 @@ export circuit enrol(holder: Bytes<32>, year: Uint<64>): [] {
 // Returns a pseudonym unique to that venue. The venue learns that, and that the
 // proof verified. Not her name, not her birth year, not which issuer enrolled
 // her, and not whether she has been anywhere else.
-export circuit proveOfAge(venueId: Bytes<32>): Bytes<32> {
-  const sk = localSecretKey();
-  const holder = holderId(sk);
-  const year = birthYear();
-  const issuer = enrollingIssuer();
-
-  const leaf = enrolmentLeaf(holder, year, issuer);
-  const path = enrolmentPath(leaf);
-
-  // Bind the path to OUR leaf before checking membership.
-  //
-  // merkleTreePathRoot hashes the path's own leaf, and this witness runs on the
-  // prover's machine. Without this assert, anyone could return a genuinely
-  // enrolled person's path and be admitted having never been enrolled. Verified
-  // end to end at github.com/tomiin/merkle-leaf-binding-probe. Costs 8 rows.
-  assert(path.leaf == leaf, "Doorman: enrolment path does not match this holder");
-
-  assert(enrolled.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(path))),
-    "Doorman: no valid enrolment");
-
-  // The age test itself. `year` never leaves the circuit; only the verdict does,
-  // and the verdict is asserted, so it is `true` for every proof that lands.
-  assert(disclose((year + legalAge()) as Uint<64> <= currentYear),
-    "Doorman: not old enough");
-
-  const patron = disclose(patronId(sk, venueId));
-  if (!admitted.member(patron)) {
-    admitted.insert(patron);
-    admissionCount.increment(1);
-  }
-  return patron;
-}
-
 // ---- Reads ------------------------------------------------------------------
 
 export circuit hasBeenAdmitted(patron: Bytes<32>): Boolean {

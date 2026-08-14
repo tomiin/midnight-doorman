@@ -91,7 +91,7 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('claimRegistry',
                                      'argument 1 (as invoked from Typescript)',
-                                     'doorman.compact line 167 char 1',
+                                     'doorman-android.compact line 189 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
@@ -115,14 +115,14 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('registerIssuer',
                                      'argument 1 (as invoked from Typescript)',
-                                     'doorman.compact line 175 char 1',
+                                     'doorman-android.compact line 197 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(tag_0.buffer instanceof ArrayBuffer && tag_0.BYTES_PER_ELEMENT === 1 && tag_0.length === 32)) {
           __compactRuntime.typeError('registerIssuer',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'doorman.compact line 175 char 1',
+                                     'doorman-android.compact line 197 char 1',
                                      'Bytes<32>',
                                      tag_0)
         }
@@ -149,14 +149,14 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('revokeIssuer',
                                      'argument 1 (as invoked from Typescript)',
-                                     'doorman.compact line 180 char 1',
+                                     'doorman-android.compact line 202 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(tag_0.buffer instanceof ArrayBuffer && tag_0.BYTES_PER_ELEMENT === 1 && tag_0.length === 32)) {
           __compactRuntime.typeError('revokeIssuer',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'doorman.compact line 180 char 1',
+                                     'doorman-android.compact line 202 char 1',
                                      'Bytes<32>',
                                      tag_0)
         }
@@ -182,7 +182,7 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('advanceYear',
                                      'argument 1 (as invoked from Typescript)',
-                                     'doorman.compact line 185 char 1',
+                                     'doorman-android.compact line 207 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
@@ -207,21 +207,21 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('enrol',
                                      'argument 1 (as invoked from Typescript)',
-                                     'doorman.compact line 194 char 1',
+                                     'doorman-android.compact line 216 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(holder_0.buffer instanceof ArrayBuffer && holder_0.BYTES_PER_ELEMENT === 1 && holder_0.length === 32)) {
           __compactRuntime.typeError('enrol',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'doorman.compact line 194 char 1',
+                                     'doorman-android.compact line 216 char 1',
                                      'Bytes<32>',
                                      holder_0)
         }
         if (!(typeof(year_0) === 'bigint' && year_0 >= 0n && year_0 <= 18446744073709551615n)) {
           __compactRuntime.typeError('enrol',
                                      'argument 2 (argument 3 as invoked from Typescript)',
-                                     'doorman.compact line 194 char 1',
+                                     'doorman-android.compact line 216 char 1',
                                      'Uint<0..18446744073709551616>',
                                      year_0)
         }
@@ -251,14 +251,14 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('hasBeenAdmitted',
                                      'argument 1 (as invoked from Typescript)',
-                                     'doorman.compact line 212 char 1',
+                                     'doorman-android.compact line 234 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(patron_0.buffer instanceof ArrayBuffer && patron_0.BYTES_PER_ELEMENT === 1 && patron_0.length === 32)) {
           __compactRuntime.typeError('hasBeenAdmitted',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'doorman.compact line 212 char 1',
+                                     'doorman-android.compact line 234 char 1',
                                      'Bytes<32>',
                                      patron_0)
         }
@@ -287,14 +287,14 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('isRegisteredIssuer',
                                      'argument 1 (as invoked from Typescript)',
-                                     'doorman.compact line 216 char 1',
+                                     'doorman-android.compact line 238 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
         if (!(tag_0.buffer instanceof ArrayBuffer && tag_0.BYTES_PER_ELEMENT === 1 && tag_0.length === 32)) {
           __compactRuntime.typeError('isRegisteredIssuer',
                                      'argument 1 (argument 2 as invoked from Typescript)',
-                                     'doorman.compact line 216 char 1',
+                                     'doorman-android.compact line 238 char 1',
                                      'Bytes<32>',
                                      tag_0)
         }
@@ -322,7 +322,7 @@ export class Contract {
         if (!(typeof(contextOrig_0) === 'object' && contextOrig_0.currentQueryContext != undefined)) {
           __compactRuntime.typeError('thisYear',
                                      'argument 1 (as invoked from Typescript)',
-                                     'doorman.compact line 222 char 1',
+                                     'doorman-android.compact line 244 char 1',
                                      'CircuitContext',
                                      contextOrig_0)
         }
@@ -521,7 +521,7 @@ export class Contract {
     if (!(result_0.buffer instanceof ArrayBuffer && result_0.BYTES_PER_ELEMENT === 1 && result_0.length === 32)) {
       __compactRuntime.typeError('localSecretKey',
                                  'return value',
-                                 'doorman.compact line 98 char 1',
+                                 'doorman-android.compact line 120 char 1',
                                  'Bytes<32>',
                                  result_0)
     }
@@ -544,7 +544,7 @@ export class Contract {
                                    holder_0,
                                    __compactRuntime.convertFieldToBytes(32,
                                                                         year_0,
-                                                                        'doorman.compact line 130 char 5'),
+                                                                        'doorman-android.compact line 152 char 5'),
                                    issuer_0]);
   }
   _patronId_0(sk_0, venue_0) {
@@ -667,7 +667,7 @@ export class Contract {
     this._assertRegistry_0(context, partialProofData);
     const tmp_0 = ((t1) => {
                     if (t1 > 18446744073709551615n) {
-                      throw new __compactRuntime.CompactError('doorman.compact line 187 char 17: cast from Field or Uint value to smaller Uint value failed: ' + t1 + ' is greater than 18446744073709551615');
+                      throw new __compactRuntime.CompactError('doorman-android.compact line 209 char 17: cast from Field or Uint value to smaller Uint value failed: ' + t1 + ' is greater than 18446744073709551615');
                     }
                     return t1;
                   })(_descriptor_2.fromValue(__compactRuntime.queryLedgerState(context,
@@ -923,7 +923,7 @@ export function ledger(stateOrChargedState) {
         if (!(key_0.buffer instanceof ArrayBuffer && key_0.BYTES_PER_ELEMENT === 1 && key_0.length === 32)) {
           __compactRuntime.typeError('member',
                                      'argument 1',
-                                     'doorman.compact line 68 char 1',
+                                     'doorman-android.compact line 90 char 1',
                                      'Bytes<32>',
                                      key_0)
         }
@@ -952,7 +952,7 @@ export function ledger(stateOrChargedState) {
         if (!(key_0.buffer instanceof ArrayBuffer && key_0.BYTES_PER_ELEMENT === 1 && key_0.length === 32)) {
           __compactRuntime.typeError('lookup',
                                      'argument 1',
-                                     'doorman.compact line 68 char 1',
+                                     'doorman-android.compact line 90 char 1',
                                      'Bytes<32>',
                                      key_0)
         }
@@ -1046,7 +1046,7 @@ export function ledger(stateOrChargedState) {
         if (!(elem_0.buffer instanceof ArrayBuffer && elem_0.BYTES_PER_ELEMENT === 1 && elem_0.length === 32)) {
           __compactRuntime.typeError('member',
                                      'argument 1',
-                                     'doorman.compact line 87 char 1',
+                                     'doorman-android.compact line 109 char 1',
                                      'Bytes<32>',
                                      elem_0)
         }
@@ -1124,7 +1124,7 @@ export const pureCircuits = {
     if (!(sk_0.buffer instanceof ArrayBuffer && sk_0.BYTES_PER_ELEMENT === 1 && sk_0.length === 32)) {
       __compactRuntime.typeError('holderId',
                                  'argument 1',
-                                 'doorman.compact line 111 char 1',
+                                 'doorman-android.compact line 133 char 1',
                                  'Bytes<32>',
                                  sk_0)
     }
@@ -1138,7 +1138,7 @@ export const pureCircuits = {
     if (!(sk_0.buffer instanceof ArrayBuffer && sk_0.BYTES_PER_ELEMENT === 1 && sk_0.length === 32)) {
       __compactRuntime.typeError('issuerId',
                                  'argument 1',
-                                 'doorman.compact line 115 char 1',
+                                 'doorman-android.compact line 137 char 1',
                                  'Bytes<32>',
                                  sk_0)
     }
@@ -1154,21 +1154,21 @@ export const pureCircuits = {
     if (!(holder_0.buffer instanceof ArrayBuffer && holder_0.BYTES_PER_ELEMENT === 1 && holder_0.length === 32)) {
       __compactRuntime.typeError('enrolmentLeaf',
                                  'argument 1',
-                                 'doorman.compact line 122 char 1',
+                                 'doorman-android.compact line 144 char 1',
                                  'Bytes<32>',
                                  holder_0)
     }
     if (!(typeof(year_0) === 'bigint' && year_0 >= 0n && year_0 <= 18446744073709551615n)) {
       __compactRuntime.typeError('enrolmentLeaf',
                                  'argument 2',
-                                 'doorman.compact line 122 char 1',
+                                 'doorman-android.compact line 144 char 1',
                                  'Uint<0..18446744073709551616>',
                                  year_0)
     }
     if (!(issuer_0.buffer instanceof ArrayBuffer && issuer_0.BYTES_PER_ELEMENT === 1 && issuer_0.length === 32)) {
       __compactRuntime.typeError('enrolmentLeaf',
                                  'argument 3',
-                                 'doorman.compact line 122 char 1',
+                                 'doorman-android.compact line 144 char 1',
                                  'Bytes<32>',
                                  issuer_0)
     }
@@ -1183,14 +1183,14 @@ export const pureCircuits = {
     if (!(sk_0.buffer instanceof ArrayBuffer && sk_0.BYTES_PER_ELEMENT === 1 && sk_0.length === 32)) {
       __compactRuntime.typeError('patronId',
                                  'argument 1',
-                                 'doorman.compact line 136 char 1',
+                                 'doorman-android.compact line 158 char 1',
                                  'Bytes<32>',
                                  sk_0)
     }
     if (!(venue_0.buffer instanceof ArrayBuffer && venue_0.BYTES_PER_ELEMENT === 1 && venue_0.length === 32)) {
       __compactRuntime.typeError('patronId',
                                  'argument 2',
-                                 'doorman.compact line 136 char 1',
+                                 'doorman-android.compact line 158 char 1',
                                  'Bytes<32>',
                                  venue_0)
     }

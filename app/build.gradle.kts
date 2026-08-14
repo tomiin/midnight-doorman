@@ -63,7 +63,11 @@ kotlin {
 // circuit keys as assets/keys/increment.{prover,verifier,bzkir}.
 // CounterContract reads those canonical paths at runtime.
 kuiraContract {
-    source.set("../contract/src/managed/doorman")
+    source.set("../contract/src/managed/doorman-android")
+    // Keep the alias as "doorman" so the generated facade stays
+    // DoormanContract. The source is the Android variant; see
+    // contract/src/doorman-android.compact for why it differs.
+    alias.set("doorman")
     // Passkey hostname, consumed by kuiraDoctor's assetlinks-reachability
     // preflight: it fetches https://<rpId>/.well-known/assetlinks.json and checks
     // the file lists this applicationId. Keep in sync with PASSKEY_RP_ID in

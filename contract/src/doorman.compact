@@ -36,6 +36,14 @@ import CompactStandardLibrary;
 // returning patron or bar someone, but derived from the venue id, so two venues
 // comparing notes cannot tell they served the same person.
 //
+// WHAT ACTUALLY RUNS ON ANDROID TODAY
+// -----------------------------------
+// This is the full design, and what the test suite runs against. The Android app
+// deploys doorman-android.compact instead: this contract with the enrolment tree
+// and proveOfAge removed, because Kuira 0.1.0-alpha05 cannot construct a
+// HistoricMerkleTree. The browser build will use this file, since the TypeScript
+// SDK can query the tree for a membership path.
+//
 // HONEST LIMITS
 // -------------
 //   * Enrolment means the issuer knows the link between a human and a
@@ -72,10 +80,7 @@ export ledger issuers: Map<Bytes<32>, Boolean>;
 // ONE tree, with the issuer tag inside the leaf rather than a tree per issuer.
 // Per-issuer trees would need one checkRoot each, and checkRoot publishes its
 // result, so an observer could read off which issuer vouched for her.
-// TEMPORARILY REMOVED for a Kuira runtime probe. Restore from
-// doorman.compact.full once we know whether newBoundedMerkleTree exists in the
-// SDK's bundled compact runtime.
-// export ledger enrolled: HistoricMerkleTree<10, Bytes<32>>;
+export ledger enrolled: HistoricMerkleTree<10, Bytes<32>>;
 
 // The current year, as a plain number. A circuit cannot read a clock, so the
 // registry advances this and the age check is made against it.
@@ -104,7 +109,7 @@ witness birthYear(): Uint<64>;
 witness enrollingIssuer(): Bytes<32>;
 
 // The membership path for her own leaf.
-// witness enrolmentPath(leaf: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+witness enrolmentPath(leaf: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
 
 // ---- Derivations (domain-separated throughout) ------------------------------
 
@@ -197,6 +202,7 @@ export circuit enrol(holder: Bytes<32>, year: Uint<64>): [] {
   assert(issuers.member(tag), "Doorman: caller is not a registered issuer");
   assert(issuers.lookup(tag), "Doorman: this issuer has been revoked");
 
+  enrolled.insert(disclose(enrolmentLeaf(disclose(holder), disclose(year), tag)));
   enrolmentCount.increment(1);
 }
 
@@ -207,6 +213,39 @@ export circuit enrol(holder: Bytes<32>, year: Uint<64>): [] {
 // Returns a pseudonym unique to that venue. The venue learns that, and that the
 // proof verified. Not her name, not her birth year, not which issuer enrolled
 // her, and not whether she has been anywhere else.
+export circuit proveOfAge(venueId: Bytes<32>): Bytes<32> {
+  const sk = localSecretKey();
+  const holder = holderId(sk);
+  const year = birthYear();
+  const issuer = enrollingIssuer();
+
+  const leaf = enrolmentLeaf(holder, year, issuer);
+  const path = enrolmentPath(leaf);
+
+  // Bind the path to OUR leaf before checking membership.
+  //
+  // merkleTreePathRoot hashes the path's own leaf, and this witness runs on the
+  // prover's machine. Without this assert, anyone could return a genuinely
+  // enrolled person's path and be admitted having never been enrolled. Verified
+  // end to end at github.com/tomiin/merkle-leaf-binding-probe. Costs 8 rows.
+  assert(path.leaf == leaf, "Doorman: enrolment path does not match this holder");
+
+  assert(enrolled.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(path))),
+    "Doorman: no valid enrolment");
+
+  // The age test itself. `year` never leaves the circuit; only the verdict does,
+  // and the verdict is asserted, so it is `true` for every proof that lands.
+  assert(disclose((year + legalAge()) as Uint<64> <= currentYear),
+    "Doorman: not old enough");
+
+  const patron = disclose(patronId(sk, venueId));
+  if (!admitted.member(patron)) {
+    admitted.insert(patron);
+    admissionCount.increment(1);
+  }
+  return patron;
+}
+
 // ---- Reads ------------------------------------------------------------------
 
 export circuit hasBeenAdmitted(patron: Bytes<32>): Boolean {
