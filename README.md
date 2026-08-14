@@ -17,6 +17,63 @@ Doorman answers that question and nothing else.
 There is no verification vendor in the middle. Nobody decrypts anything, because
 nothing was ever sent.
 
+## Initial idea
+
+Age checks today are answered by disclosure. A venue that needs to know one fact,
+whether a person is over 21, collects a document carrying twenty. The venue does
+not want that document either: it is a liability they are forced to hold. Doorman
+replaces the disclosure with a proof. A licensed issuer enrols a person once,
+writing a single opaque hash on-chain that binds their identity, their birth year
+and the issuer who vouched for them. Nothing readable is published. At the door
+the person's phone proves, on the device, that they hold a valid enrolment and
+that the birth year inside it clears the threshold. The venue receives one bit
+and a pseudonym unique to that venue, so two venues cannot compare notes and work
+out they served the same person. The product is aimed at places people choose to
+go rather than places they need: bars, clubs, adult platforms, age-gated retail.
+Those are exactly the venues that are legally obliged to check and would rather
+not be holding scans of anyone's licence.
+
+## Public state vs private witness
+
+The distinction Compact forces you to make, stated plainly for this contract.
+
+**Public ledger state** — on-chain, readable by anyone:
+
+| field | what it is |
+| --- | --- |
+| `registry` | the authority's derived id, an opaque hash |
+| `registryClaimed` | whether the registry has been claimed |
+| `issuers` | which issuer tags are licensed, keyed by opaque hash |
+| `currentYear` | the year the age test is measured against |
+| `enrolmentCount`, `admissionCount` | counters |
+| `admitted` | venue-specific pseudonyms that have been admitted |
+| `enrolled` | the enrolment tree, leaves are opaque hashes |
+
+**Private witnesses** — supplied by the caller's own device, consumed inside the
+proof, never written to the chain:
+
+| witness | what it is |
+| --- | --- |
+| `localSecretKey()` | the 32 bytes every identity in the contract derives from |
+| `birthYear()` | her actual year of birth |
+| `enrollingIssuer()` | which issuer enrolled her |
+| `enrolmentPath()` | the Merkle path proving her leaf is in the tree |
+
+**What she proves without revealing.** That a registered issuer enrolled her, and
+that `birthYear + 21 <= currentYear`. The venue learns neither the year, nor
+which issuer vouched for her, nor which leaf in the tree is hers.
+
+**Where `disclose()` is used, and why.** Three places, each deliberate.
+`enrol` discloses the finished leaf hash, because it has to be written to the
+tree, and a hash of a domain-separated tuple reveals nothing about its inputs.
+`proveOfAge` discloses the Merkle root it computed, because `checkRoot` is a
+ledger operation and its argument reaches the public transcript either way. And
+it discloses the venue pseudonym, because that is the one value the venue is
+meant to receive. The birth year is never disclosed: it is compared in-circuit
+and only the verdict escapes, and because the verdict is asserted rather than
+returned it is `true` for every proof that lands, so it carries no information
+about the caller.
+
 ## Why this has to be a phone
 
 The proof is generated on the device. That is the only reason the underlying data
