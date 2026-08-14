@@ -179,6 +179,18 @@ Circuits called on-chain, beyond the deploy:
 Recording of an `enrol` call running against preprod on the emulator:
 [`docs/doorman-preprod-enrol.mov`](docs/doorman-preprod-enrol.mov)
 
+## Screenshots
+
+Nine circuits compiling, with `k` and row counts. `proveOfAge` is absent here
+because this is the Kuira build; see the section below.
+
+![compile output](docs/screenshots/compile-output.png)
+
+The app on a Pixel 8 emulator, showing the registry deployed on preprod at
+`ea2d6468…` and the enrolment count read live from chain.
+
+![deployed on preprod](docs/screenshots/deployed-preprod.png)
+
 ## The Android app
 
 `app/` is a Kuira SDK dApp (`io.github.kuiralabs:dapp-ui`), package
